@@ -70,6 +70,7 @@ const Appointment = () => {
         const slotTime = formattedTime;
 
         const isSlotAvailable =
+          docInfo.slots_booked &&
           docInfo.slots_booked[slotDate] &&
           docInfo.slots_booked[slotDate].includes(slotTime)
             ? false
@@ -95,6 +96,11 @@ const Appointment = () => {
     if (!token) {
       toast.warn('Login to book appointment');
       return navigate('/login');
+    }
+
+    if (!docInfo.available) {
+      toast.error('Doctor is not available for appointments currently.');
+      return;
     }
 
     try {
@@ -134,7 +140,9 @@ const Appointment = () => {
   }, [doctors, docId]);
 
   useEffect(() => {
-    getAvailableSlots();
+    if (docInfo) {
+      getAvailableSlots();
+    }
   }, [docInfo]);
 
   useEffect(() => {
@@ -189,7 +197,7 @@ const Appointment = () => {
         </div>
 
         {/* -------- Booking slots -------- */}
-        {docInfo.available ? (
+        {docSlots.some(day => day.length > 0) ? (
           <div className="sm:ml-72 sm:pl-4 mt-4 font-medium text-gray-700">
             <p>Booking slots</p>
             <div className="flex gap-3 items-center w-full overflow-x-scroll mt-4">
