@@ -5,9 +5,11 @@ import { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const MyAppointments = () => {
   const { backendUrl, token, getDoctorData } = useContext(AppContext);
+  const navigate = useNavigate();
 
   const [appointments, setAppointments] = useState([]);
   const months = [
@@ -75,9 +77,57 @@ const MyAppointments = () => {
     }
   };
 
+
+  const appointmentStripePay = async (appointmentId) => {
+
+    try {
+      
+      const {data} = await axios.post(backendUrl + '/api/user/payment-stripepay', {appointmentId}, {headers: {
+        token
+      }})
+
+      if (data.success) {
+       window.location.href = data.session.url;
+      }
+
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
+  const verifyPayment = async (sessionId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + '/api/user/verify-payment',
+        { sessionId },
+        {
+          headers: {
+            token,
+          },
+        }
+      );
+      if (data.success) {
+        toast.success(data.message);
+        getUserAppointments();
+        navigate('/my-appointments');
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       getUserAppointments();
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      if (sessionId) {
+        console.log('Stripe Session ID:', sessionId);
+        verifyPayment(sessionId);
+      }
     }
   }, [token]);
 
@@ -116,8 +166,12 @@ const MyAppointments = () => {
             </div>
             <div></div>
             <div className="flex flex-col gap-2 justify-end">
-              {!item.cancelled && (
-                <button className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300">
+            {!item.cancelled && item.payment && <button className='sm:min-w-48 py-2 border rounded text-stone-500 bg-indigo-50'>Paid</button>}
+              {!item.cancelled && !item.payment && (
+                <button
+                  onClick={() => appointmentStripePay(item._id)}
+                  className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300"
+                >
                   Pay Online
                 </button>
               )}
